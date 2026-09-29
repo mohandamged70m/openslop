@@ -1,10 +1,7 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
-import {
-	findScrollableAncestor,
-	scrollIntoContainer,
-} from "@/lib/components/scrollIntoContainer";
+import { scrollIntoContainer } from "@/lib/components/scrollIntoContainer";
 import { cn } from "@/lib/utils";
 import { trailingAssistant } from "@/lib/agent/messages";
 import type { SloppyMessage } from "@/lib/agent/types";
@@ -76,38 +73,20 @@ function Transcript({
 	);
 }
 
-const BOTTOM_THRESHOLD_PX = 48;
-
 export function SloppyPanel() {
 	const messages = useSloppyMessages();
 	const { loading } = useSloppy();
 	const endRef = useRef<HTMLDivElement>(null);
-	const isAtBottomRef = useRef(true);
+	const lastSentId = useRef<string>(undefined);
 
+	// Jump to the bottom once per sent message (and once for a restored
+	// transcript), then leave scrolling to the user while the reply streams.
+	const sentId = messages?.findLast((m) => m.role === "user")?.id;
 	useEffect(() => {
-		const end = endRef.current;
-		if (!end) return;
-		const target = findScrollableAncestor(end) ?? document.scrollingElement;
-		if (!target) return;
-		const onScroll = () => {
-			const distance =
-				target.scrollHeight - target.scrollTop - target.clientHeight;
-			isAtBottomRef.current = distance <= BOTTOM_THRESHOLD_PX;
-		};
-		target.addEventListener("scroll", onScroll, { passive: true });
-		return () => target.removeEventListener("scroll", onScroll);
-	}, []);
-
-	useEffect(() => {
-		if (!endRef.current || !messages) return;
-		const last = messages[messages.length - 1];
-		if (last?.role === "user") {
-			isAtBottomRef.current = true;
-		} else if (!isAtBottomRef.current) {
-			return;
-		}
+		if (!endRef.current || sentId === lastSentId.current) return;
+		lastSentId.current = sentId;
 		scrollIntoContainer(endRef.current, "end", "auto");
-	}, [messages]);
+	}, [sentId]);
 
 	return (
 		<div
