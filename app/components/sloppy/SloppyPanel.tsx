@@ -84,8 +84,9 @@ export function SloppyPanel() {
 	const sentId = messages?.findLast((m) => m.role === "user")?.id;
 	useEffect(() => {
 		if (!endRef.current || sentId === lastSentId.current) return;
+		const restoring = lastSentId.current === undefined;
 		lastSentId.current = sentId;
-		scrollIntoContainer(endRef.current, "end", "auto");
+		scrollIntoContainer(endRef.current, "end", restoring ? "auto" : "smooth");
 	}, [sentId]);
 
 	return (
